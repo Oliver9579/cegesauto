@@ -50,6 +50,6 @@ public class LogEntry {
 
     @Override
     public String toString() {
-        return getDate() + " " + carId + " " + userId + " " + direction.getDescription();
+        return getTime() + " " + carId + " " + userId + " " + direction.getDescription();
     }
 }

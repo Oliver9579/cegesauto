@@ -2,9 +2,9 @@ package hu.companycar.controller;
 
 import hu.companycar.model.domain.Direction;
 import hu.companycar.model.domain.LogEntry;
+import hu.companycar.model.domain.Pair;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class CarService {
@@ -75,5 +75,72 @@ public class CarService {
         return carDistanceCounters.get(carDistanceCounters.size() - 1);
     }
 
+    public String getLongestDistancePerUser() {
+        Pair pair = getMaxDistancePair();
+        return String.format("Leghosszabb út: %d km, személy: %d", pair.getRight(), pair.getLeft());
+    }
 
+    private Pair getMaxDistancePair() {
+        return createPairs().stream()
+                .max(Comparator.comparing(Pair::getRight))
+                .get();
+    }
+
+    private List<Pair> createPairs() {
+        List<Pair> pairs = new ArrayList<>();
+        getUsers().forEach(i -> pairs.addAll(createPairPerUser(i)));
+        return pairs;
+
+    }
+
+    private Set<Integer> getUsers() {
+        return logEntries.stream()
+                .map(LogEntry::getUserId)
+                .collect(Collectors.toSet());
+    }
+    private List<Pair> createPairPerUser(int userId) {
+        List<LogEntry> userIdEntries = createUserIdEntries(userId);
+        int size = userIdEntries.size();
+        int lastIndex = size %2 == 0 ? size : size - 1;
+        List<Pair> pairs = new ArrayList<>();
+        for (int i = 0; i < lastIndex; i +=2 ) {
+            int distance = userIdEntries.get(i + 1).getDistanceCounter() - userIdEntries.get(i).getDistanceCounter();
+            pairs.add(new Pair(userId, distance));
+        }
+        return pairs;
+    }
+
+    private List<LogEntry> createUserIdEntries(int userId) {
+        return logEntries.stream()
+                .filter(i -> i.getUserId() == userId)
+                .collect(Collectors.toList());
+    }
+
+    public List<String> getItinerary(String carId) {
+        List<String> lines = new ArrayList<>();
+        List<LogEntry> carIdLogs = getCarIdLogs(carId);
+        int size = carIdLogs.size();
+        int lastIndex = size %2 == 0 ? size : size - 1;
+        for (int i = 0; i< lastIndex; i += 2) {
+            lines.add(printLog(carIdLogs.get(i), carIdLogs.get(i + 1)));
+        }
+        if (size % 2 > 0) {
+            lines.add(printLog(carIdLogs.get(size - 1)));
+        }
+        return lines;
+    }
+
+    private List<LogEntry> getCarIdLogs(String carId) {
+        return logEntries.stream()
+                .filter(i -> i.getCarId().equals(carId))
+                .collect(Collectors.toList());
+    }
+
+    private String printLog(LogEntry out, LogEntry in) {
+        return String.format("%d\t%s\t%d km\t%s\t%d km", out.getUserId(), out.getDate(), out.getDistanceCounter(), in.getDate(), in.getDistanceCounter());
+    }
+
+    private String printLog(LogEntry out) {
+        return String.format("%d\t%s\t%d km", out.getUserId(), out.getDate(), out.getDistanceCounter());
+    }
 }
